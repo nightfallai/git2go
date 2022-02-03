@@ -1,4 +1,4 @@
-module github.com/libgit2/git2go/v33
+module github.com/watchtowerai/git2go/v33
 
 go 1.13
 

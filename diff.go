@@ -450,9 +450,6 @@ func (diff *Diff) ToBuf(format DiffFormat) ([]byte, error) {
 
 	diffBuf := C.git_buf{}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ecode := C.git_diff_to_buf(&diffBuf, diff.ptr, C.git_diff_format_t(format))
 	runtime.KeepAlive(diff)
 	if ecode < 0 {

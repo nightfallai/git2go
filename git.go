@@ -335,6 +335,11 @@ func MakeGitError(c C.int) error {
 	return &GitError{errMessage, errClass, errorCode}
 }
 
+func MakeFastGitError(c C.int) error {
+	errorCode := ErrorCode(c)
+	return &GitError{"", 0, errorCode}
+}
+
 func MakeGitError2(err int) error {
 	return MakeGitError(C.int(err))
 }

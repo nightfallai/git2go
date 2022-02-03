@@ -202,13 +202,10 @@ func (v *Repository) Index() (*Index, error) {
 func (v *Repository) lookupType(id *Oid, t ObjectType) (*Object, error) {
 	var ptr *C.git_object
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_object_lookup(&ptr, v.ptr, id.toC(), C.git_object_t(t))
 	runtime.KeepAlive(id)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return allocObject(ptr, v), nil

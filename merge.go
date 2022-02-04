@@ -29,9 +29,6 @@ func newAnnotatedCommitFromC(ptr *C.git_annotated_commit, r *Repository) *Annota
 }
 
 func (mh *AnnotatedCommit) Id() *Oid {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := newOidFromC(C.git_annotated_commit_id(mh.ptr))
 	runtime.KeepAlive(mh)
 	return ret
@@ -49,14 +46,11 @@ func (r *Repository) AnnotatedCommitFromFetchHead(branchName string, remoteURL s
 	cremoteURL := C.CString(remoteURL)
 	defer C.free(unsafe.Pointer(cremoteURL))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var ptr *C.git_annotated_commit
 	ret := C.git_annotated_commit_from_fetchhead(&ptr, r.ptr, cbranchName, cremoteURL, oid.toC())
 	runtime.KeepAlive(oid)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	annotatedCommit := newAnnotatedCommitFromC(ptr, r)
@@ -65,14 +59,11 @@ func (r *Repository) AnnotatedCommitFromFetchHead(branchName string, remoteURL s
 }
 
 func (r *Repository) LookupAnnotatedCommit(oid *Oid) (*AnnotatedCommit, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var ptr *C.git_annotated_commit
 	ret := C.git_annotated_commit_lookup(&ptr, r.ptr, oid.toC())
 	runtime.KeepAlive(oid)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	annotatedCommit := newAnnotatedCommitFromC(ptr, r)
@@ -81,15 +72,12 @@ func (r *Repository) LookupAnnotatedCommit(oid *Oid) (*AnnotatedCommit, error) {
 }
 
 func (r *Repository) AnnotatedCommitFromRef(ref *Reference) (*AnnotatedCommit, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var ptr *C.git_annotated_commit
 	ret := C.git_annotated_commit_from_ref(&ptr, r.ptr, ref.ptr)
 	runtime.KeepAlive(r)
 	runtime.KeepAlive(ref)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	annotatedCommit := newAnnotatedCommitFromC(ptr, r)
@@ -101,14 +89,11 @@ func (r *Repository) AnnotatedCommitFromRevspec(spec string) (*AnnotatedCommit, 
 	crevspec := C.CString(spec)
 	defer C.free(unsafe.Pointer(crevspec))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var ptr *C.git_annotated_commit
 	ret := C.git_annotated_commit_from_revspec(&ptr, r.ptr, crevspec)
 	runtime.KeepAlive(r)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	annotatedCommit := newAnnotatedCommitFromC(ptr, r)
@@ -161,12 +146,9 @@ func mergeOptionsFromC(opts *C.git_merge_options) MergeOptions {
 func DefaultMergeOptions() (MergeOptions, error) {
 	opts := C.git_merge_options{}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ecode := C.git_merge_options_init(&opts, C.GIT_MERGE_OPTIONS_VERSION)
 	if ecode < 0 {
-		return MergeOptions{}, MakeGitError(ecode)
+		return MergeOptions{}, MakeFastGitError(ecode)
 	}
 	return mergeOptionsFromC(&opts), nil
 }
@@ -197,9 +179,6 @@ const (
 )
 
 func (r *Repository) Merge(theirHeads []*AnnotatedCommit, mergeOptions *MergeOptions, checkoutOptions *CheckoutOptions) error {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var err error
 	cMergeOpts := populateMergeOptions(&C.git_merge_options{}, mergeOptions)
 	defer freeMergeOptions(cMergeOpts)
@@ -217,7 +196,7 @@ func (r *Repository) Merge(theirHeads []*AnnotatedCommit, mergeOptions *MergeOpt
 		return err
 	}
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 	return nil
 }
@@ -244,9 +223,6 @@ const (
 // a 'git-merge' command. There may be multiple answers, so the first
 // return value is a bitmask of MergeAnalysis values.
 func (r *Repository) MergeAnalysis(theirHeads []*AnnotatedCommit) (MergeAnalysis, MergePreference, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	gmerge_head_array := make([]*C.git_annotated_commit, len(theirHeads))
 	for i := 0; i < len(theirHeads); i++ {
 		gmerge_head_array[i] = theirHeads[i].ptr
@@ -257,16 +233,13 @@ func (r *Repository) MergeAnalysis(theirHeads []*AnnotatedCommit) (MergeAnalysis
 	err := C.git_merge_analysis(&analysis, &preference, r.ptr, (**C.git_annotated_commit)(ptr), C.size_t(len(theirHeads)))
 	runtime.KeepAlive(theirHeads)
 	if err < 0 {
-		return MergeAnalysisNone, MergePreferenceNone, MakeGitError(err)
+		return MergeAnalysisNone, MergePreferenceNone, MakeFastGitError(err)
 	}
 	return MergeAnalysis(analysis), MergePreference(preference), nil
 
 }
 
 func (r *Repository) MergeCommits(ours *Commit, theirs *Commit, options *MergeOptions) (*Index, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	copts := populateMergeOptions(&C.git_merge_options{}, options)
 	defer freeMergeOptions(copts)
 
@@ -275,16 +248,13 @@ func (r *Repository) MergeCommits(ours *Commit, theirs *Commit, options *MergeOp
 	runtime.KeepAlive(ours)
 	runtime.KeepAlive(theirs)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return newIndexFromC(ptr, r), nil
 }
 
 func (r *Repository) MergeTrees(ancestor *Tree, ours *Tree, theirs *Tree, options *MergeOptions) (*Index, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	copts := populateMergeOptions(&C.git_merge_options{}, options)
 	defer freeMergeOptions(copts)
 
@@ -298,23 +268,20 @@ func (r *Repository) MergeTrees(ancestor *Tree, ours *Tree, theirs *Tree, option
 	runtime.KeepAlive(ours)
 	runtime.KeepAlive(theirs)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return newIndexFromC(ptr, r), nil
 }
 
 func (r *Repository) MergeBase(one *Oid, two *Oid) (*Oid, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var oid C.git_oid
 	ret := C.git_merge_base(&oid, r.ptr, one.toC(), two.toC())
 	runtime.KeepAlive(one)
 	runtime.KeepAlive(two)
 	runtime.KeepAlive(r)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return newOidFromC(&oid), nil
 }
@@ -324,15 +291,12 @@ func (r *Repository) MergeBase(one *Oid, two *Oid) (*Oid, error) {
 // If none are found, an empty slice is returned and the error is set
 // approprately
 func (r *Repository) MergeBases(one, two *Oid) ([]*Oid, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var coids C.git_oidarray
 	ret := C.git_merge_bases(&coids, r.ptr, one.toC(), two.toC())
 	runtime.KeepAlive(one)
 	runtime.KeepAlive(two)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	oids := make([]*Oid, coids.count)
@@ -358,15 +322,12 @@ func (r *Repository) MergeBaseMany(oids []*Oid) (*Oid, error) {
 		coids[i] = *oids[i].toC()
 	}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var oid C.git_oid
 	ret := C.git_merge_base_many(&oid, r.ptr, C.size_t(len(oids)), &coids[0])
 	runtime.KeepAlive(r)
 	runtime.KeepAlive(coids)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return newOidFromC(&oid), nil
 }
@@ -378,15 +339,12 @@ func (r *Repository) MergeBasesMany(oids []*Oid) ([]*Oid, error) {
 		inCoids[i] = *oids[i].toC()
 	}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var outCoids C.git_oidarray
 	ret := C.git_merge_bases_many(&outCoids, r.ptr, C.size_t(len(oids)), &inCoids[0])
 	runtime.KeepAlive(r)
 	runtime.KeepAlive(inCoids)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	outOids := make([]*Oid, outCoids.count)
@@ -411,15 +369,12 @@ func (r *Repository) MergeBaseOctopus(oids []*Oid) (*Oid, error) {
 		coids[i] = *oids[i].toC()
 	}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var oid C.git_oid
 	ret := C.git_merge_base_octopus(&oid, r.ptr, C.size_t(len(oids)), &coids[0])
 	runtime.KeepAlive(r)
 	runtime.KeepAlive(coids)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return newOidFromC(&oid), nil
 }
@@ -567,14 +522,11 @@ func MergeFile(ancestor MergeFileInput, ours MergeFileInput, theirs MergeFileInp
 		copts = &C.git_merge_file_options{}
 		ecode := C.git_merge_file_options_init(copts, C.GIT_MERGE_FILE_OPTIONS_VERSION)
 		if ecode < 0 {
-			return nil, MakeGitError(ecode)
+			return nil, MakeFastGitError(ecode)
 		}
 		populateMergeFileOptions(copts, options)
 		defer freeMergeFileOptions(copts)
 	}
-
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
 
 	var result C.git_merge_file_result
 	ecode := C._go_git_merge_file(&result,
@@ -586,7 +538,7 @@ func MergeFile(ancestor MergeFileInput, ours MergeFileInput, theirs MergeFileInp
 	runtime.KeepAlive(ours)
 	runtime.KeepAlive(theirs)
 	if ecode < 0 {
-		return nil, MakeGitError(ecode)
+		return nil, MakeFastGitError(ecode)
 	}
 
 	return newMergeFileResultFromC(&result), nil

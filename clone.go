@@ -36,9 +36,6 @@ func Clone(url string, path string, options *CloneOptions) (*Repository, error) 
 		cOptions.checkout_branch = C.CString(options.CheckoutBranch)
 	}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var ptr *C.git_repository
 	ret := C.git_clone(&ptr, curl, cpath, cOptions)
 
@@ -46,7 +43,7 @@ func Clone(url string, path string, options *CloneOptions) (*Repository, error) 
 		return nil, err
 	}
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return newRepositoryFromC(ptr), nil

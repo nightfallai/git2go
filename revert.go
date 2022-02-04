@@ -46,12 +46,9 @@ func freeRevertOptions(copts *C.git_revert_options) {
 func DefaultRevertOptions() (RevertOptions, error) {
 	copts := C.git_revert_options{}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ecode := C.git_revert_options_init(&copts, C.GIT_REVERT_OPTIONS_VERSION)
 	if ecode < 0 {
-		return RevertOptions{}, MakeGitError(ecode)
+		return RevertOptions{}, MakeFastGitError(ecode)
 	}
 
 	defer freeRevertOptions(&copts)
@@ -60,9 +57,6 @@ func DefaultRevertOptions() (RevertOptions, error) {
 
 // Revert the provided commit leaving the index updated with the results of the revert
 func (r *Repository) Revert(commit *Commit, revertOptions *RevertOptions) error {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var err error
 	cOpts := populateRevertOptions(&C.git_revert_options{}, revertOptions, &err)
 	defer freeRevertOptions(cOpts)
@@ -75,7 +69,7 @@ func (r *Repository) Revert(commit *Commit, revertOptions *RevertOptions) error 
 		return err
 	}
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 
 	return nil
@@ -84,9 +78,6 @@ func (r *Repository) Revert(commit *Commit, revertOptions *RevertOptions) error 
 // RevertCommit reverts the provided commit against "ourCommit"
 // The returned index contains the result of the revert and should be freed
 func (r *Repository) RevertCommit(revertCommit *Commit, ourCommit *Commit, mainline uint, mergeOptions *MergeOptions) (*Index, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	cOpts := populateMergeOptions(&C.git_merge_options{}, mergeOptions)
 	defer freeMergeOptions(cOpts)
 
@@ -97,7 +88,7 @@ func (r *Repository) RevertCommit(revertCommit *Commit, ourCommit *Commit, mainl
 	runtime.KeepAlive(ourCommit)
 
 	if ecode < 0 {
-		return nil, MakeGitError(ecode)
+		return nil, MakeFastGitError(ecode)
 	}
 
 	return newIndexFromC(index, r), nil

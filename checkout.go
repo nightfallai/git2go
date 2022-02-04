@@ -197,9 +197,6 @@ func freeCheckoutOptions(copts *C.git_checkout_options) {
 // Updates files in the index and the working tree to match the content of
 // the commit pointed at by HEAD. opts may be nil.
 func (v *Repository) CheckoutHead(opts *CheckoutOptions) error {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var err error
 	cOpts := populateCheckoutOptions(&C.git_checkout_options{}, opts, &err)
 	defer freeCheckoutOptions(cOpts)
@@ -211,7 +208,7 @@ func (v *Repository) CheckoutHead(opts *CheckoutOptions) error {
 		return err
 	}
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 
 	return nil
@@ -226,9 +223,6 @@ func (v *Repository) CheckoutIndex(index *Index, opts *CheckoutOptions) error {
 		iptr = index.ptr
 	}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var err error
 	cOpts := populateCheckoutOptions(&C.git_checkout_options{}, opts, &err)
 	defer freeCheckoutOptions(cOpts)
@@ -239,16 +233,13 @@ func (v *Repository) CheckoutIndex(index *Index, opts *CheckoutOptions) error {
 		return err
 	}
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 
 	return nil
 }
 
 func (v *Repository) CheckoutTree(tree *Tree, opts *CheckoutOptions) error {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var err error
 	cOpts := populateCheckoutOptions(&C.git_checkout_options{}, opts, &err)
 	defer freeCheckoutOptions(cOpts)
@@ -260,7 +251,7 @@ func (v *Repository) CheckoutTree(tree *Tree, opts *CheckoutOptions) error {
 		return err
 	}
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 
 	return nil

@@ -39,13 +39,10 @@ type DescribeOptions struct {
 
 // DefaultDescribeOptions returns default options for the describe operation.
 func DefaultDescribeOptions() (DescribeOptions, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	opts := C.git_describe_options{}
 	ecode := C.git_describe_options_init(&opts, C.GIT_DESCRIBE_OPTIONS_VERSION)
 	if ecode < 0 {
-		return DescribeOptions{}, MakeGitError(ecode)
+		return DescribeOptions{}, MakeFastGitError(ecode)
 	}
 
 	return DescribeOptions{
@@ -73,13 +70,10 @@ type DescribeFormatOptions struct {
 // DefaultDescribeFormatOptions returns default options for formatting
 // the output.
 func DefaultDescribeFormatOptions() (DescribeFormatOptions, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	opts := C.git_describe_format_options{}
 	ecode := C.git_describe_format_options_init(&opts, C.GIT_DESCRIBE_FORMAT_OPTIONS_VERSION)
 	if ecode < 0 {
-		return DescribeFormatOptions{}, MakeGitError(ecode)
+		return DescribeFormatOptions{}, MakeFastGitError(ecode)
 	}
 
 	return DescribeFormatOptions{
@@ -124,13 +118,10 @@ func (c *Commit) Describe(opts *DescribeOptions) (*DescribeResult, error) {
 		}
 	}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ecode := C.git_describe_commit(&resultPtr, c.ptr, cDescribeOpts)
 	runtime.KeepAlive(c)
 	if ecode < 0 {
-		return nil, MakeGitError(ecode)
+		return nil, MakeFastGitError(ecode)
 	}
 
 	return newDescribeResultFromC(resultPtr), nil
@@ -159,13 +150,10 @@ func (repo *Repository) DescribeWorkdir(opts *DescribeOptions) (*DescribeResult,
 		}
 	}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ecode := C.git_describe_workdir(&resultPtr, repo.ptr, cDescribeOpts)
 	runtime.KeepAlive(repo)
 	if ecode < 0 {
-		return nil, MakeGitError(ecode)
+		return nil, MakeFastGitError(ecode)
 	}
 
 	return newDescribeResultFromC(resultPtr), nil
@@ -205,13 +193,10 @@ func (result *DescribeResult) Format(opts *DescribeFormatOptions) (string, error
 		}
 	}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ecode := C.git_describe_format(&resultBuf, result.ptr, cFormatOpts)
 	runtime.KeepAlive(result)
 	if ecode < 0 {
-		return "", MakeGitError(ecode)
+		return "", MakeFastGitError(ecode)
 	}
 	defer C.git_buf_dispose(&resultBuf)
 

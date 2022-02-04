@@ -35,9 +35,6 @@ func NewIndexer(packfilePath string, odb *Odb, callback TransferProgressCallback
 	indexer = new(Indexer)
 	populateRemoteCallbacks(&indexer.ccallbacks, &RemoteCallbacks{TransferProgressCallback: callback}, nil)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	cstr := C.CString(packfilePath)
 	defer C.free(unsafe.Pointer(cstr))
 
@@ -45,7 +42,7 @@ func NewIndexer(packfilePath string, odb *Odb, callback TransferProgressCallback
 	runtime.KeepAlive(odb)
 	if ret < 0 {
 		untrackCallbacksPayload(&indexer.ccallbacks)
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	runtime.SetFinalizer(indexer, (*Indexer).Free)
@@ -58,13 +55,10 @@ func (indexer *Indexer) Write(data []byte) (int, error) {
 	ptr := unsafe.Pointer(header.Data)
 	size := C.size_t(header.Len)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_indexer_append(indexer.ptr, ptr, size, &indexer.stats)
 	runtime.KeepAlive(indexer)
 	if ret < 0 {
-		return 0, MakeGitError(ret)
+		return 0, MakeFastGitError(ret)
 	}
 
 	return len(data), nil
@@ -76,12 +70,9 @@ func (indexer *Indexer) Write(data []byte) (int, error) {
 // It also returns the packfile's hash. A packfile's name is derived from the
 // sorted hashing of all object names.
 func (indexer *Indexer) Commit() (*Oid, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_indexer_commit(indexer.ptr, &indexer.stats)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	id := newOidFromC(C.git_indexer_hash(indexer.ptr))

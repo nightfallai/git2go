@@ -42,17 +42,13 @@ func newBranchIteratorFromC(repo *Repository, ptr *C.git_branch_iterator) *Branc
 }
 
 func (i *BranchIterator) Next() (*Branch, BranchType, error) {
-
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var refPtr *C.git_reference
 	var refType C.git_branch_t
 
 	ecode := C.git_branch_next(&refPtr, &refType, i.ptr)
 
 	if ecode < 0 {
-		return nil, BranchLocal, MakeGitError(ecode)
+		return nil, BranchLocal, MakeFastGitError(ecode)
 	}
 
 	branch := newReferenceFromC(refPtr, i.repo).Branch()
@@ -86,13 +82,10 @@ func (repo *Repository) NewBranchIterator(flags BranchType) (*BranchIterator, er
 	refType := C.git_branch_t(flags)
 	var ptr *C.git_branch_iterator
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ecode := C.git_branch_iterator_new(&ptr, repo.ptr, refType)
 	runtime.KeepAlive(repo)
 	if ecode < 0 {
-		return nil, MakeGitError(ecode)
+		return nil, MakeFastGitError(ecode)
 	}
 
 	return newBranchIteratorFromC(repo, ptr), nil
@@ -105,26 +98,20 @@ func (repo *Repository) CreateBranch(branchName string, target *Commit, force bo
 	defer C.free(unsafe.Pointer(cBranchName))
 	cForce := cbool(force)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_branch_create(&ptr, repo.ptr, cBranchName, target.cast_ptr, cForce)
 	runtime.KeepAlive(repo)
 	runtime.KeepAlive(target)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return newReferenceFromC(ptr, repo).Branch(), nil
 }
 
 func (b *Branch) Delete() error {
-
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
 	ret := C.git_branch_delete(b.Reference.ptr)
 	runtime.KeepAlive(b.Reference)
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 	return nil
 }
@@ -135,22 +122,15 @@ func (b *Branch) Move(newBranchName string, force bool) (*Branch, error) {
 	defer C.free(unsafe.Pointer(cNewBranchName))
 	cForce := cbool(force)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_branch_move(&ptr, b.Reference.ptr, cNewBranchName, cForce)
 	runtime.KeepAlive(b.Reference)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return newReferenceFromC(ptr, b.repo).Branch(), nil
 }
 
 func (b *Branch) IsHead() (bool, error) {
-
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_branch_is_head(b.Reference.ptr)
 	runtime.KeepAlive(b.Reference)
 	switch ret {
@@ -159,7 +139,7 @@ func (b *Branch) IsHead() (bool, error) {
 	case 0:
 		return false, nil
 	}
-	return false, MakeGitError(ret)
+	return false, MakeFastGitError(ret)
 
 }
 
@@ -169,13 +149,10 @@ func (repo *Repository) LookupBranch(branchName string, bt BranchType) (*Branch,
 	cName := C.CString(branchName)
 	defer C.free(unsafe.Pointer(cName))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_branch_lookup(&ptr, repo.ptr, cName, C.git_branch_t(bt))
 	runtime.KeepAlive(repo)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return newReferenceFromC(ptr, repo).Branch(), nil
 }
@@ -184,13 +161,10 @@ func (b *Branch) Name() (string, error) {
 	var cName *C.char
 	defer C.free(unsafe.Pointer(cName))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_branch_name(&cName, b.Reference.ptr)
 	runtime.KeepAlive(b.Reference)
 	if ret < 0 {
-		return "", MakeGitError(ret)
+		return "", MakeFastGitError(ret)
 	}
 
 	return C.GoString(cName), nil
@@ -202,13 +176,10 @@ func (repo *Repository) RemoteName(canonicalBranchName string) (string, error) {
 
 	nameBuf := C.git_buf{}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_branch_remote_name(&nameBuf, repo.ptr, cName)
 	runtime.KeepAlive(repo)
 	if ret < 0 {
-		return "", MakeGitError(ret)
+		return "", MakeFastGitError(ret)
 	}
 	defer C.git_buf_dispose(&nameBuf)
 
@@ -219,13 +190,10 @@ func (b *Branch) SetUpstream(upstreamName string) error {
 	cName := C.CString(upstreamName)
 	defer C.free(unsafe.Pointer(cName))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_branch_set_upstream(b.Reference.ptr, cName)
 	runtime.KeepAlive(b.Reference)
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 	return nil
 }
@@ -233,13 +201,11 @@ func (b *Branch) SetUpstream(upstreamName string) error {
 func (b *Branch) Upstream() (*Reference, error) {
 
 	var ptr *C.git_reference
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
 
 	ret := C.git_branch_upstream(&ptr, b.Reference.ptr)
 	runtime.KeepAlive(b.Reference)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return newReferenceFromC(ptr, b.repo), nil
 }
@@ -250,13 +216,10 @@ func (repo *Repository) UpstreamName(canonicalBranchName string) (string, error)
 
 	nameBuf := C.git_buf{}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_branch_upstream_name(&nameBuf, repo.ptr, cName)
 	runtime.KeepAlive(repo)
 	if ret < 0 {
-		return "", MakeGitError(ret)
+		return "", MakeFastGitError(ret)
 	}
 	defer C.git_buf_dispose(&nameBuf)
 

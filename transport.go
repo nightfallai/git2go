@@ -86,12 +86,9 @@ type Transport struct {
 
 // SmartProxyOptions gets a copy of the proxy options for this transport.
 func (t *Transport) SmartProxyOptions() (*ProxyOptions, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var cpopts C.git_proxy_options
 	if ret := C.git_transport_smart_proxy_options(&cpopts, t.ptr); ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return proxyOptionsFromC(&cpopts), nil
@@ -102,9 +99,6 @@ func (t *Transport) SmartCredentials(user string, methods CredentialType) (*Cred
 	cred := newCredential()
 	var cstr *C.char
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	if user != "" {
 		cstr = C.CString(user)
 		defer C.free(unsafe.Pointer(cstr))
@@ -112,7 +106,7 @@ func (t *Transport) SmartCredentials(user string, methods CredentialType) (*Cred
 	ret := C.git_transport_smart_credentials(&cred.ptr, t.ptr, cstr, C.int(methods))
 	if ret != 0 {
 		cred.Free()
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return cred, nil
@@ -156,9 +150,6 @@ func (t *Transport) SmartCertificateCheck(cert *Certificate, valid bool, hostnam
 		ccert = (*C.git_cert)(unsafe.Pointer(&cx509Cert))
 	}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	chostname := C.CString(hostname)
 	defer C.free(unsafe.Pointer(chostname))
 
@@ -169,7 +160,7 @@ func (t *Transport) SmartCertificateCheck(cert *Certificate, valid bool, hostnam
 
 	ret := C.git_transport_smart_certificate_check(t.ptr, ccert, cvalid, chostname)
 	if ret != 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 
 	return nil
@@ -256,9 +247,6 @@ func newRegisteredSmartTransport(
 	cstr := C.CString(name)
 	defer C.free(unsafe.Pointer(cstr))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	registeredSmartTransport := &RegisteredSmartTransport{
 		name:      name,
 		stateless: stateless,
@@ -269,7 +257,7 @@ func newRegisteredSmartTransport(
 	ret := C._go_git_transport_register(cstr, registeredSmartTransport.handle)
 	if ret != 0 {
 		pointerHandles.Untrack(registeredSmartTransport.handle)
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	runtime.SetFinalizer(registeredSmartTransport, (*RegisteredSmartTransport).Free)
@@ -279,14 +267,11 @@ func newRegisteredSmartTransport(
 // Free releases all resources used by the RegisteredSmartTransport and
 // unregisters the custom transport definition referenced by it.
 func (t *RegisteredSmartTransport) Free() error {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	cstr := C.CString(t.name)
 	defer C.free(unsafe.Pointer(cstr))
 
 	if ret := C.git_transport_unregister(cstr); ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 
 	pointerHandles.Untrack(t.handle)
@@ -319,9 +304,6 @@ func smartTransportCallback(
 	managedHandle := pointerHandles.Track(managed)
 	managed.handle = managedHandle
 	managed.subtransport.handle = managedHandle
-
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
 
 	ret := C._go_git_transport_smart(out, owner, cbool(registeredSmartTransport.stateless), managed.subtransport)
 	if ret != 0 {
@@ -378,9 +360,6 @@ func smartSubtransportActionCallback(
 
 	// It's okay to do strict equality here: we expect both to be identical.
 	if subtransport.currentManagedStream == nil || subtransport.currentManagedStream.underlying != underlyingStream {
-		runtime.LockOSThread()
-		defer runtime.UnlockOSThread()
-
 		stream := (*C._go_managed_smart_subtransport_stream)(C.calloc(1, C.size_t(unsafe.Sizeof(C._go_managed_smart_subtransport_stream{}))))
 		managed := &managedSmartSubtransportStream{
 			underlying: underlyingStream,

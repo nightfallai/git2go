@@ -60,11 +60,8 @@ type Config struct {
 func NewConfig() (*Config, error) {
 	config := new(Config)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	if ret := C.git_config_new(&config.ptr); ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return config, nil
@@ -75,13 +72,10 @@ func (c *Config) AddFile(path string, level ConfigLevel, force bool) error {
 	cpath := C.CString(path)
 	defer C.free(unsafe.Pointer(cpath))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_add_file_ondisk(c.ptr, cpath, C.git_config_level_t(level), nil, cbool(force))
 	runtime.KeepAlive(c)
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 
 	return nil
@@ -92,13 +86,10 @@ func (c *Config) LookupInt32(name string) (int32, error) {
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_get_int32(&out, c.ptr, cname)
 	runtime.KeepAlive(c)
 	if ret < 0 {
-		return 0, MakeGitError(ret)
+		return 0, MakeFastGitError(ret)
 	}
 
 	return int32(out), nil
@@ -109,13 +100,10 @@ func (c *Config) LookupInt64(name string) (int64, error) {
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_get_int64(&out, c.ptr, cname)
 	runtime.KeepAlive(c)
 	if ret < 0 {
-		return 0, MakeGitError(ret)
+		return 0, MakeFastGitError(ret)
 	}
 
 	return int64(out), nil
@@ -127,13 +115,10 @@ func (c *Config) LookupString(name string) (string, error) {
 
 	valBuf := C.git_buf{}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_get_string_buf(&valBuf, c.ptr, cname)
 	runtime.KeepAlive(c)
 	if ret < 0 {
-		return "", MakeGitError(ret)
+		return "", MakeFastGitError(ret)
 	}
 	defer C.git_buf_dispose(&valBuf)
 
@@ -145,13 +130,10 @@ func (c *Config) LookupBool(name string) (bool, error) {
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_get_bool(&out, c.ptr, cname)
 	runtime.KeepAlive(c)
 	if ret < 0 {
-		return false, MakeGitError(ret)
+		return false, MakeFastGitError(ret)
 	}
 
 	return out != 0, nil
@@ -171,12 +153,9 @@ func (c *Config) NewMultivarIterator(name, regexp string) (*ConfigIterator, erro
 
 	iter := &ConfigIterator{cfg: c}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_multivar_iterator_new(&iter.ptr, c.ptr, cname, cregexp)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	runtime.SetFinalizer(iter, (*ConfigIterator).Free)
@@ -188,12 +167,9 @@ func (c *Config) NewMultivarIterator(name, regexp string) (*ConfigIterator, erro
 func (c *Config) NewIterator() (*ConfigIterator, error) {
 	iter := &ConfigIterator{cfg: c}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_iterator_new(&iter.ptr, c.ptr)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return iter, nil
@@ -206,12 +182,9 @@ func (c *Config) NewIteratorGlob(regexp string) (*ConfigIterator, error) {
 	cregexp := C.CString(regexp)
 	defer C.free(unsafe.Pointer(cregexp))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_iterator_glob_new(&iter.ptr, c.ptr, cregexp)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return iter, nil
@@ -224,13 +197,10 @@ func (c *Config) SetString(name, value string) (err error) {
 	cvalue := C.CString(value)
 	defer C.free(unsafe.Pointer(cvalue))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_set_string(c.ptr, cname, cvalue)
 	runtime.KeepAlive(c)
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 
 	return nil
@@ -245,13 +215,10 @@ func (c *Config) SetInt32(name string, value int32) (err error) {
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_set_int32(c.ptr, cname, C.int32_t(value))
 	runtime.KeepAlive(c)
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 
 	return nil
@@ -261,13 +228,10 @@ func (c *Config) SetInt64(name string, value int64) (err error) {
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_set_int64(c.ptr, cname, C.int64_t(value))
 	runtime.KeepAlive(c)
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 
 	return nil
@@ -277,13 +241,10 @@ func (c *Config) SetBool(name string, value bool) (err error) {
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_set_bool(c.ptr, cname, cbool(value))
 	runtime.KeepAlive(c)
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 
 	return nil
@@ -299,13 +260,10 @@ func (c *Config) SetMultivar(name, regexp, value string) (err error) {
 	cvalue := C.CString(value)
 	defer C.free(unsafe.Pointer(cvalue))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_set_multivar(c.ptr, cname, cregexp, cvalue)
 	runtime.KeepAlive(c)
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 
 	return nil
@@ -315,13 +273,10 @@ func (c *Config) Delete(name string) error {
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_delete_entry(c.ptr, cname)
 	runtime.KeepAlive(c)
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 
 	return nil
@@ -331,14 +286,11 @@ func (c *Config) Delete(name string) error {
 func (c *Config) OpenLevel(parent *Config, level ConfigLevel) (*Config, error) {
 	config := new(Config)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_open_level(&config.ptr, parent.ptr, C.git_config_level_t(level))
 	runtime.KeepAlive(c)
 	runtime.KeepAlive(parent)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return config, nil
@@ -351,11 +303,8 @@ func OpenOndisk(path string) (*Config, error) {
 
 	config := new(Config)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	if ret := C.git_config_open_ondisk(&config.ptr, cpath); ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return config, nil
@@ -371,12 +320,9 @@ type ConfigIterator struct {
 func (iter *ConfigIterator) Next() (*ConfigEntry, error) {
 	var centry *C.git_config_entry
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_next(&centry, iter.ptr)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	entry := newConfigEntryFromC(centry)
@@ -394,12 +340,9 @@ func ConfigFindGlobal() (string, error) {
 	var buf C.git_buf
 	defer C.git_buf_dispose(&buf)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_find_global(&buf)
 	if ret < 0 {
-		return "", MakeGitError(ret)
+		return "", MakeFastGitError(ret)
 	}
 
 	return C.GoString(buf.ptr), nil
@@ -409,12 +352,9 @@ func ConfigFindSystem() (string, error) {
 	var buf C.git_buf
 	defer C.git_buf_dispose(&buf)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_find_system(&buf)
 	if ret < 0 {
-		return "", MakeGitError(ret)
+		return "", MakeFastGitError(ret)
 	}
 
 	return C.GoString(buf.ptr), nil
@@ -424,12 +364,9 @@ func ConfigFindXDG() (string, error) {
 	var buf C.git_buf
 	defer C.git_buf_dispose(&buf)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_find_xdg(&buf)
 	if ret < 0 {
-		return "", MakeGitError(ret)
+		return "", MakeFastGitError(ret)
 	}
 
 	return C.GoString(buf.ptr), nil
@@ -442,12 +379,9 @@ func ConfigFindProgramdata() (string, error) {
 	var buf C.git_buf
 	defer C.git_buf_dispose(&buf)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_config_find_programdata(&buf)
 	if ret < 0 {
-		return "", MakeGitError(ret)
+		return "", MakeFastGitError(ret)
 	}
 
 	return C.GoString(buf.ptr), nil
@@ -455,13 +389,10 @@ func ConfigFindProgramdata() (string, error) {
 
 // OpenDefault opens the default config according to git rules
 func OpenDefault() (*Config, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	config := new(Config)
 
 	if ret := C.git_config_open_default(&config.ptr); ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return config, nil

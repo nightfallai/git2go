@@ -270,16 +270,13 @@ func ShortenOids(ids []*Oid, minlen int) (int, error) {
 
 	var ret C.int
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	for _, id := range ids {
 		buf := make([]byte, 41)
 		C.git_oid_fmt((*C.char)(unsafe.Pointer(&buf[0])), id.toC())
 		buf[40] = 0
 		ret = C.git_oid_shorten_add(shorten, (*C.char)(unsafe.Pointer(&buf[0])))
 		if ret < 0 {
-			return int(ret), MakeGitError(ret)
+			return int(ret), MakeFastGitError(ret)
 		}
 	}
 	runtime.KeepAlive(ids)
@@ -379,12 +376,9 @@ func Discover(start string, across_fs bool, ceiling_dirs []string) (string, erro
 	var buf C.git_buf
 	defer C.git_buf_dispose(&buf)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_repository_discover(&buf, cstart, cbool(across_fs), ceildirs)
 	if ret < 0 {
-		return "", MakeGitError(ret)
+		return "", MakeFastGitError(ret)
 	}
 
 	return C.GoString(buf.ptr), nil

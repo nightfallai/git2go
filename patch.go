@@ -42,15 +42,12 @@ func (patch *Patch) String() (string, error) {
 		return "", ErrInvalid
 	}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var buf C.git_buf
 
 	ecode := C.git_patch_to_buf(&buf, patch.ptr)
 	runtime.KeepAlive(patch)
 	if ecode < 0 {
-		return "", MakeGitError(ecode)
+		return "", MakeFastGitError(ecode)
 	}
 	defer C.git_buf_dispose(&buf)
 
@@ -82,9 +79,6 @@ func (v *Repository) PatchFromBuffers(oldPath, newPath string, oldBuf, newBuf []
 	copts := populateDiffOptions(&C.git_diff_options{}, opts, v, &err)
 	defer freeDiffOptions(copts)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_patch_from_buffers(&patchPtr, oldPtr, C.size_t(len(oldBuf)), cOldPath, newPtr, C.size_t(len(newBuf)), cNewPath, copts)
 	runtime.KeepAlive(oldBuf)
 	runtime.KeepAlive(newBuf)
@@ -92,7 +86,7 @@ func (v *Repository) PatchFromBuffers(oldPath, newPath string, oldBuf, newBuf []
 		return nil, err
 	}
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return newPatchFromC(patchPtr), nil

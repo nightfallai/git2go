@@ -136,23 +136,17 @@ func (o *Credential) GetSSHKey() (username, publickey, privatekey, passphrase st
 }
 
 func NewCredentialUsername(username string) (*Credential, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	cred := newCredential()
 	cusername := C.CString(username)
 	ret := C.git_credential_username_new(&cred.ptr, cusername)
 	if ret != 0 {
 		cred.Free()
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return cred, nil
 }
 
 func NewCredentialUserpassPlaintext(username string, password string) (*Credential, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	cred := newCredential()
 	cusername := C.CString(username)
 	defer C.free(unsafe.Pointer(cusername))
@@ -161,7 +155,7 @@ func NewCredentialUserpassPlaintext(username string, password string) (*Credenti
 	ret := C.git_credential_userpass_plaintext_new(&cred.ptr, cusername, cpassword)
 	if ret != 0 {
 		cred.Free()
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return cred, nil
 }
@@ -169,9 +163,6 @@ func NewCredentialUserpassPlaintext(username string, password string) (*Credenti
 // NewCredentialSSHKey creates new ssh credentials reading the public and private keys
 // from the file system.
 func NewCredentialSSHKey(username string, publicKeyPath string, privateKeyPath string, passphrase string) (*Credential, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	cred := newCredential()
 	cusername := C.CString(username)
 	defer C.free(unsafe.Pointer(cusername))
@@ -184,7 +175,7 @@ func NewCredentialSSHKey(username string, publicKeyPath string, privateKeyPath s
 	ret := C.git_credential_ssh_key_new(&cred.ptr, cusername, cpublickey, cprivatekey, cpassphrase)
 	if ret != 0 {
 		cred.Free()
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return cred, nil
 }
@@ -192,9 +183,6 @@ func NewCredentialSSHKey(username string, publicKeyPath string, privateKeyPath s
 // NewCredentialSSHKeyFromMemory creates new ssh credentials using the publicKey and privateKey
 // arguments as the values for the public and private keys.
 func NewCredentialSSHKeyFromMemory(username string, publicKey string, privateKey string, passphrase string) (*Credential, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	cred := newCredential()
 	cusername := C.CString(username)
 	defer C.free(unsafe.Pointer(cusername))
@@ -207,22 +195,19 @@ func NewCredentialSSHKeyFromMemory(username string, publicKey string, privateKey
 	ret := C.git_credential_ssh_key_memory_new(&cred.ptr, cusername, cpublickey, cprivatekey, cpassphrase)
 	if ret != 0 {
 		cred.Free()
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return cred, nil
 }
 
 func NewCredentialSSHKeyFromAgent(username string) (*Credential, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	cred := newCredential()
 	cusername := C.CString(username)
 	defer C.free(unsafe.Pointer(cusername))
 	ret := C.git_credential_ssh_key_from_agent(&cred.ptr, cusername)
 	if ret != 0 {
 		cred.Free()
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return cred, nil
 }
@@ -285,14 +270,11 @@ func NewCredentialSSHKeyFromSigner(username string, signer ssh.Signer) (*Credent
 }
 
 func NewCredentialDefault() (*Credential, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	cred := newCredential()
 	ret := C.git_credential_default_new(&cred.ptr)
 	if ret != 0 {
 		cred.Free()
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return cred, nil
 }

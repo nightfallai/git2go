@@ -26,12 +26,9 @@ type RefdbBackend struct {
 func (v *Repository) NewRefdb() (refdb *Refdb, err error) {
 	var ptr *C.git_refdb
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_refdb_new(&ptr, v.ptr)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	refdb = &Refdb{ptr: ptr, r: v}
@@ -45,15 +42,12 @@ func NewRefdbBackendFromC(ptr unsafe.Pointer) (backend *RefdbBackend) {
 }
 
 func (v *Refdb) SetBackend(backend *RefdbBackend) (err error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_refdb_set_backend(v.ptr, backend.ptr)
 	runtime.KeepAlive(v)
 	runtime.KeepAlive(backend)
 	if ret < 0 {
 		backend.Free()
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 	return nil
 }

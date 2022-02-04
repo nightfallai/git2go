@@ -162,16 +162,13 @@ func (v *Repository) StatusList(opts *StatusOptions) (*StatusList, error) {
 		copts = &C.git_status_options{}
 		ret := C.git_status_options_init(copts, C.GIT_STATUS_OPTIONS_VERSION)
 		if ret < 0 {
-			return nil, MakeGitError(ret)
+			return nil, MakeFastGitError(ret)
 		}
 	}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_status_list_new(&ptr, v.ptr, copts)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 
 	return newStatusListFromC(ptr, v), nil
@@ -182,13 +179,10 @@ func (v *Repository) StatusFile(path string) (Status, error) {
 	cPath := C.CString(path)
 	defer C.free(unsafe.Pointer(cPath))
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ret := C.git_status_file(&statusFlags, v.ptr, cPath)
 	runtime.KeepAlive(v)
 	if ret < 0 {
-		return 0, MakeGitError(ret)
+		return 0, MakeFastGitError(ret)
 	}
 	return Status(statusFlags), nil
 }

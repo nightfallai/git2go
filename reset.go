@@ -4,7 +4,6 @@ package git
 #include <git2.h>
 */
 import "C"
-import "runtime"
 
 type ResetType int
 
@@ -15,9 +14,6 @@ const (
 )
 
 func (r *Repository) ResetToCommit(commit *Commit, resetType ResetType, opts *CheckoutOptions) error {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var err error
 	cOpts := populateCheckoutOptions(&C.git_checkout_options{}, opts, &err)
 	defer freeCheckoutOptions(cOpts)
@@ -27,7 +23,7 @@ func (r *Repository) ResetToCommit(commit *Commit, resetType ResetType, opts *Ch
 		return err
 	}
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 	return nil
 }
@@ -38,12 +34,10 @@ func (r *Repository) ResetDefaultToCommit(commit *Commit, pathspecs []string) er
 	cpathspecs.strings = makeCStringsFromStrings(pathspecs)
 	defer freeStrarray(&cpathspecs)
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
 	ret := C.git_reset_default(r.ptr, commit.ptr, &cpathspecs)
 
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 	return nil
 }

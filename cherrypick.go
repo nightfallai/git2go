@@ -45,21 +45,15 @@ func freeCherrypickOpts(copts *C.git_cherrypick_options) {
 func DefaultCherrypickOptions() (CherrypickOptions, error) {
 	c := C.git_cherrypick_options{}
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ecode := C.git_cherrypick_options_init(&c, C.GIT_CHERRYPICK_OPTIONS_VERSION)
 	if ecode < 0 {
-		return CherrypickOptions{}, MakeGitError(ecode)
+		return CherrypickOptions{}, MakeFastGitError(ecode)
 	}
 	defer freeCherrypickOpts(&c)
 	return cherrypickOptionsFromC(&c), nil
 }
 
 func (v *Repository) Cherrypick(commit *Commit, opts CherrypickOptions) error {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var err error
 	cOpts := populateCherrypickOptions(&C.git_cherrypick_options{}, &opts, &err)
 	defer freeCherrypickOpts(cOpts)
@@ -71,15 +65,12 @@ func (v *Repository) Cherrypick(commit *Commit, opts CherrypickOptions) error {
 		return err
 	}
 	if ret < 0 {
-		return MakeGitError(ret)
+		return MakeFastGitError(ret)
 	}
 	return nil
 }
 
 func (r *Repository) CherrypickCommit(pick, our *Commit, opts CherrypickOptions) (*Index, error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	cOpts := populateMergeOptions(&C.git_merge_options{}, &opts.MergeOptions)
 	defer freeMergeOptions(cOpts)
 
@@ -88,7 +79,7 @@ func (r *Repository) CherrypickCommit(pick, our *Commit, opts CherrypickOptions)
 	runtime.KeepAlive(pick)
 	runtime.KeepAlive(our)
 	if ret < 0 {
-		return nil, MakeGitError(ret)
+		return nil, MakeFastGitError(ret)
 	}
 	return newIndexFromC(ptr, r), nil
 }

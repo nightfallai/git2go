@@ -88,7 +88,7 @@ func (v *RevWalk) PushHead() (err error) {
 	ecode := C.git_revwalk_push_head(v.ptr)
 	runtime.KeepAlive(v)
 	if ecode < 0 {
-		err = MakeFastGitError(ecode)
+		return MakeFastGitError(ecode)
 	}
 	return nil
 }

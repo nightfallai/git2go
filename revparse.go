@@ -7,7 +7,6 @@ extern void _go_git_revspec_free(git_revspec *revspec);
 */
 import "C"
 import (
-	"runtime"
 	"unsafe"
 )
 
@@ -63,12 +62,9 @@ func (r *Repository) Revparse(spec string) (*Revspec, error) {
 
 	var crevspec C.git_revspec
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ecode := C.git_revparse(&crevspec, r.ptr, cspec)
 	if ecode != 0 {
-		return nil, MakeGitError(ecode)
+		return nil, MakeFastGitError(ecode)
 	}
 
 	return newRevspecFromC(&crevspec, r), nil
@@ -80,12 +76,9 @@ func (v *Repository) RevparseSingle(spec string) (*Object, error) {
 
 	var ptr *C.git_object
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ecode := C.git_revparse_single(&ptr, v.ptr, cspec)
 	if ecode < 0 {
-		return nil, MakeGitError(ecode)
+		return nil, MakeFastGitError(ecode)
 	}
 
 	return allocObject(ptr, v), nil
@@ -98,12 +91,9 @@ func (r *Repository) RevparseExt(spec string) (*Object, *Reference, error) {
 	var obj *C.git_object
 	var ref *C.git_reference
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	ecode := C.git_revparse_ext(&obj, &ref, r.ptr, cspec)
 	if ecode != 0 {
-		return nil, nil, MakeGitError(ecode)
+		return nil, nil, MakeFastGitError(ecode)
 	}
 
 	if ref == nil {
